@@ -55,7 +55,7 @@ function MusicPlayer() {
 
 	return (
 		<div className="music-player-container">
-			<audio ref={audioRef} src="https://www.freesoundslibrary.com/wp-content/uploads/2018/05/retro-video-game-music.mp3" loop preload="auto" />
+			<audio ref={audioRef} src="https://soundimage.org/wp-content/uploads/2019/01/The-Pixeltown-Shuffle.mp3" loop preload="auto" />
 			<button onClick={togglePlay} className="music-toggle-btn" title="Toggle Background Music">
 				<span className="blink">🎵</span> {playing ? "Mute" : "Play"}
 			</button>
