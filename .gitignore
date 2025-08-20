@@ -39,3 +39,6 @@ yarn-error.log*
 # typescript
 *.tsbuildinfo
 next-env.d.ts
+
+# Game data is now embedded directly in JavaScript bundle (Base64)
+# No external data files - everything bundled for maximum security!
