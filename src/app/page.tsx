@@ -1,102 +1,254 @@
+"use client";
+
+import { useEffect, useRef, useState } from "react";
+import "./home.css";
 import Image from "next/image";
 
-export default function Home() {
+function VisitorCounter() {
+  const [count, setCount] = useState<number | null>(null);
+  useEffect(() => {
+    try {
+      const key = "atlas-go-hit-counter";
+      const current = Number(localStorage.getItem(key) || "0");
+      const next = current + 1;
+      localStorage.setItem(key, String(next));
+      setCount(next);
+    } catch {}
+  }, []);
   return (
-    <div className="font-sans grid grid-rows-[20px_1fr_20px] items-center justify-items-center min-h-screen p-8 pb-20 gap-16 sm:p-20">
-      <main className="flex flex-col gap-[32px] row-start-2 items-center sm:items-start">
-        <Image
-          className="dark:invert"
-          src="/next.svg"
-          alt="Next.js logo"
-          width={180}
-          height={38}
-          priority
-        />
-        <ol className="font-mono list-inside list-decimal text-sm/6 text-center sm:text-left">
-          <li className="mb-2 tracking-[-.01em]">
-            Get started by editing{" "}
-            <code className="bg-black/[.05] dark:bg-white/[.06] font-mono font-semibold px-1 py-0.5 rounded">
-              src/app/page.tsx
-            </code>
-            .
-          </li>
-          <li className="tracking-[-.01em]">
-            Save and see your changes instantly.
-          </li>
-        </ol>
+    <span className="hit-counter">{String(count ?? 1).padStart(6, "0")}</span>
+  );
+}
 
-        <div className="flex gap-4 items-center flex-col sm:flex-row">
-          <a
-            className="rounded-full border border-solid border-transparent transition-colors flex items-center justify-center bg-foreground text-background gap-2 hover:bg-[#383838] dark:hover:bg-[#ccc] font-medium text-sm sm:text-base h-10 sm:h-12 px-4 sm:px-5 sm:w-auto"
-            href="https://vercel.com/new?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
+function MusicPlayer() {
+  const [playing, setPlaying] = useState(false);
+  const audioRef = useRef<HTMLAudioElement>(null);
+
+  useEffect(() => {
+    const audio = audioRef.current;
+    if (!audio) return;
+
+    const handleFirstInteraction = () => {
+      // This logic should only run once. After the first interaction, we remove the listeners.
+      window.removeEventListener('click', handleFirstInteraction);
+      window.removeEventListener('keydown', handleFirstInteraction);
+
+      // Try to play, and update state if successful.
+      audio.play()
+        .then(() => setPlaying(true))
+        .catch(err => console.warn("Autoplay after interaction failed:", err));
+    };
+
+    // Attempt to autoplay when the component mounts.
+    audio.play()
+      .then(() => setPlaying(true))
+      .catch(() => {
+        // If autoplay is blocked, set up listeners for the first user interaction.
+        setPlaying(false);
+        window.addEventListener('click', handleFirstInteraction);
+        window.addEventListener('keydown', handleFirstInteraction);
+      });
+    
+    // Cleanup listeners when the component unmounts.
+    return () => {
+      window.removeEventListener('click', handleFirstInteraction);
+      window.removeEventListener('keydown', handleFirstInteraction);
+    };
+  }, []);
+
+
+  const togglePlay = () => {
+    const audio = audioRef.current;
+    if (!audio) return;
+
+    if (playing) {
+      audio.pause();
+      setPlaying(false);
+    } else {
+      audio.play()
+        .then(() => setPlaying(true))
+        .catch(e => console.error("Audio play failed on click:", e));
+    }
+  };
+
+  return (
+    <div className="music-player-container">
+      <audio ref={audioRef} src="https://soundimage.org/wp-content/uploads/2019/01/The-Pixeltown-Shuffle.mp3" loop preload="auto" />
+      <button onClick={togglePlay} className="music-toggle-btn" title="Toggle Background Music">
+        <span className="blink">🎵</span> {playing ? "Mute" : "Play"} Music
+      </button>
+    </div>
+  );
+}
+
+export default function Home() {
+  const [loading, setLoading] = useState(true);
+  useEffect(() => {
+    const t = setTimeout(() => setLoading(false), 900);
+    return () => clearTimeout(t);
+  }, []);
+
+  return (
+    <div className="home-retro-root">
+      {loading && (
+        <div className="loading-overlay" aria-live="polite">
+          <div className="loading-box">LOADING… PLEASE WAIT ⏳</div>
+        </div>
+      )}
+
+      <MusicPlayer />
+
+      <section className="home-hero">
+        <div className="hero-inner">
+          <h1 className="hero-title rainbow-text wordart-outline">
             <Image
-              className="dark:invert"
-              src="/vercel.svg"
-              alt="Vercel logomark"
-              width={20}
-              height={20}
+              width={100}
+              height={200}
+              className="globe-gif"
+              alt="Spinning globe"
+              src="https://www.animatedimages.org/data/media/1667/animated-world-globe-image-0040.gif"
+              style={{ height: "auto" }}
             />
-            Deploy now
-          </a>
-          <a
-            className="rounded-full border border-solid border-black/[.08] dark:border-white/[.145] transition-colors flex items-center justify-center hover:bg-[#f2f2f2] dark:hover:bg-[#1a1a1a] hover:border-transparent font-medium text-sm sm:text-base h-10 sm:h-12 px-4 sm:px-5 w-full sm:w-auto md:w-[158px]"
-            href="https://nextjs.org/docs?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            Read our docs
-          </a>
+            &nbsp;ATLAS GO&nbsp;
+            <Image
+              width={100}
+              height={200}
+              className="globe-gif"
+              alt="Spinning globe"
+              src="https://www.animatedimages.org/data/media/1667/animated-world-globe-image-0040.gif"
+              style={{ height: "auto" }}
+            />
+          </h1>
+          <p className="hero-sub blink">*** ✨ WELCOME TO Atlas Go!!! ✨ ***</p>
+          <div className="hero-ctas">
+            <a className="cta primary" href="/atlas">
+              Play Atlas
+            </a>
+            <a className="cta secondary" href="#games">
+              Explore Games
+            </a>
+          </div>
+        </div>
+      </section>
+
+      <div className="retro-marquee" role="marquee" aria-label="announcements">
+        <div className="marquee-inner">
+          🔥 WELCOME 🔥 tO ThE UlTiMaTe GaMe 🔥 PlAy aTlAs nOw 🔥 NeW MoDeS SooN
+          🔥
+        </div>
+      </div>
+
+      <nav className="retro-nav" aria-label="primary">
+        <a id="code-3AE" className="nav-btn" href="/atlas">
+          <Image
+            height={30}
+            width={30}
+            className="arrow-gif"
+            alt="arrow"
+            src="https://web.archive.org/web/20090830131028im_/http://geocities.com/SunsetStrip/Amphitheatre/8793/aniarrow.gif"
+            style={{ height: "auto" }}
+          />
+          Play Atlas
+        </a>
+        <a id="code-6A9" className="nav-btn" href="#flags">
+          <Image
+            height={30}
+            width={30}
+            className="arrow-gif"
+            alt="arrow"
+            src="https://web.archive.org/web/20090830131028im_/http://geocities.com/SunsetStrip/Amphitheatre/8793/aniarrow.gif"
+            style={{ height: "auto" }}
+          />
+          Guess the Flag
+        </a>
+      </nav>
+
+      <main id="games" className="home-games-grid">
+        <div className="game-card accent-blue double">
+          <div className="game-card-body">
+            <h2 className="game-card-title">Atlas (Countries)</h2>
+            <p className="game-card-desc">
+              Name countries until your brain MELTS 🧠💥
+            </p>
+          </div>
+          <div className="game-card-actions">
+            <a className="home-cta" href="/atlas">
+              CLICK HERE TO PLAY!
+            </a>
+          </div>
+        </div>
+
+        <div className="game-card accent-green dotted soon">
+          <div className="game-card-body">
+            <h2 className="game-card-title">Atlas (Cities)
+            <Image
+                height={30}
+                width={50}
+                className="new-gif"
+                alt="new"
+                src="https://web.archive.org/web/20090830160525im_/http://geocities.com/CapitolHill/Parliament/1048/new.gif"
+                style={{ height: "auto" }}
+              />
+            </h2>
+            <p className="game-card-desc">
+              Cities mode… bigger brain burn. SOON!!! 🏙️
+            </p>
+          </div>
+          <div className="game-card-actions">
+            <button className="home-cta disabled" disabled>
+              Coming Soon
+            </button>
+          </div>
+        </div>
+
+        <div id="flags" className="game-card accent-pink dashed soon">
+          <div className="game-card-body">
+            <h2 className="game-card-title">
+              Guess the Flag
+              <Image
+                height={30}
+                width={50}
+                className="new-gif"
+                alt="new"
+                src="https://web.archive.org/web/20090830160525im_/http://geocities.com/CapitolHill/Parliament/1048/new.gif"
+                style={{ height: "auto" }}
+              />
+            </h2>
+            <p className="game-card-desc">
+              Flags = FUN. Coming Soon. Don’t miss it!!! 🚩🔥
+            </p>
+          </div>
+          <div className="game-card-actions">
+            <button className="home-cta disabled" disabled>
+              Coming Soon
+            </button>
+          </div>
         </div>
       </main>
-      <footer className="row-start-3 flex gap-[24px] flex-wrap items-center justify-center">
-        <a
-          className="flex items-center gap-2 hover:underline hover:underline-offset-4"
-          href="https://nextjs.org/learn?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <Image
-            aria-hidden
-            src="/file.svg"
-            alt="File icon"
-            width={16}
-            height={16}
-          />
-          Learn
-        </a>
-        <a
-          className="flex items-center gap-2 hover:underline hover:underline-offset-4"
-          href="https://vercel.com/templates?framework=next.js&utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <Image
-            aria-hidden
-            src="/window.svg"
-            alt="Window icon"
-            width={16}
-            height={16}
-          />
-          Examples
-        </a>
-        <a
-          className="flex items-center gap-2 hover:underline hover:underline-offset-4"
-          href="https://nextjs.org?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <Image
-            aria-hidden
-            src="/globe.svg"
-            alt="Globe icon"
-            width={16}
-            height={16}
-          />
-          Go to nextjs.org →
-        </a>
+
+      <section className="awards">
+        <Image
+          height={200}
+          width={100}
+          className="dance"
+          alt="dancer"
+          src="https://blob.gifcities.org/gifcities/2JTU7QIVICQHJGTS7X2XATX7VLAK7MNN.gif"
+          style={{ height: "auto" }}
+        />
+      </section>
+
+      <footer className="home-footer">
+        <p className="blink">
+          You are visitor number: <VisitorCounter /> since 1998
+        </p>
+        <p>
+          Contact:{" "}
+          <a href="mailto:divyparekh1810@gmail.com">divyparekh1810@gmail.com</a>{" "}
+          | Github: <a href="https://github.com/Divy97">@Divy97</a>
+        </p>
+        <p className="small">
+          Last updated: August 16, 1998 | © {new Date().getFullYear()} Atlas Go
+        </p>
       </footer>
     </div>
   );
