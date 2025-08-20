@@ -142,8 +142,6 @@ async function buildCountries() {
 }
 
 async function main() {
-	const outDir = path.join(process.cwd(), 'public', 'data', 'atlas', 'v1');
-	await ensureDir(outDir);
 
 	console.log('Building countries dataset from REST Countries...');
 	const { countries, aliasToCanonical, letterIndex, ambiguousAliases } = await buildCountries();
@@ -166,13 +164,116 @@ async function main() {
 		notes: 'Prebuilt offline dataset for atlas gameplay. v1 contains countries only.'
 	};
 
-	await writeJson(path.join(outDir, 'countries.json'), countries);
-	await writeJson(path.join(outDir, 'countries-alias.json'), aliasToCanonical);
-	await writeJson(path.join(outDir, 'countries-letter-index.json'), letterIndex);
-	await writeJson(path.join(outDir, 'dataset.json'), manifest);
+	// Convert data to base64 for embedded version
+	const countriesB64 = Buffer.from(JSON.stringify(countries)).toString('base64');
+	const aliasesB64 = Buffer.from(JSON.stringify(aliasToCanonical)).toString('base64');
+	const letterIndexB64 = Buffer.from(JSON.stringify(letterIndex)).toString('base64');
+	const manifestB64 = Buffer.from(JSON.stringify(manifest)).toString('base64');
 
-	console.log('Done. Output written to:', outDir);
-	console.log('Counts:', manifest.counts);
+	// Create the embedded atlas-data.ts content
+	const atlasDataContent = `// 🔒 Base64 encoded game data for security
+// Data is embedded directly in JavaScript bundle - no discoverable URLs!
+
+// Encoded data strings (base64)
+const COUNTRIES_DATA = '${countriesB64}';
+const ALIASES_DATA = '${aliasesB64}';  
+const LETTER_INDEX_DATA = '${letterIndexB64}';
+const MANIFEST_DATA = '${manifestB64}';
+
+// Define Country type based on the expected structure
+export type Country = {
+	id: string;
+	cca2: string;
+	nameCommon: string;
+	nameOfficial: string;
+	displayName: string;
+	region: string;
+	subregion: string;
+	independent: boolean;
+	unMember: boolean;
+	firstLetter: string;
+	lastLetter: string;
+};
+
+// Decode data at runtime
+const countries = JSON.parse(atob(COUNTRIES_DATA)) as Country[];
+const aliasToCanonical = JSON.parse(atob(ALIASES_DATA)) as Record<string, string>;
+const letterIndex = JSON.parse(atob(LETTER_INDEX_DATA)) as Record<string, string[]>;
+const manifest = JSON.parse(atob(MANIFEST_DATA)) as {
+	version: string;
+	builtAt: string;
+	counts: { countries: number; aliases: number; letters: number; ambiguousAliases: number };
+};
+
+const countriesById = new Map<string, Country>(countries.map((c) => [c.id, c]));
+
+// --- Public API ---
+
+export const datasetInfo = {
+	version: manifest.version,
+	builtAt: new Date(manifest.builtAt),
+	counts: manifest.counts
+};
+
+/**
+ * All available countries, sorted by display name.
+ */
+export const allCountries = countries;
+
+/**
+ * Returns a country by its unique cca3 ID.
+ */
+export function getCountryById(id: string): Country | undefined {
+	return countriesById.get(id);
+}
+
+/**
+ * Canonicalizes an input string for matching.
+ * This should match the logic used in the build script.
+ */
+export function canonicalize(raw: string): string {
+	return raw
+		.toLowerCase()
+		.normalize('NFD')
+		.replace(/[\\u0300-\\u036f]/g, '')
+		.replace(/[^a-z0-9]/g, '');
+}
+
+/**
+ * Resolve an alias (alternative name) to a canonical country ID.
+ */
+export function resolveAlias(alias: string): string | null {
+	const canonical = canonicalize(alias);
+	return aliasToCanonical[canonical] || null;
+}
+
+/**
+ * Get all countries that start with the given letter.
+ */
+export function getCountriesByFirstLetter(letter: string): Country[] {
+	const ids = letterIndex[letter.toLowerCase()] || [];
+	return ids.map((id) => countriesById.get(id)).filter(Boolean) as Country[];
+}
+
+/**
+ * Get a random letter that has at least one country.
+ */
+export function getRandomAvailableLetter(): string {
+	const letters = Object.keys(letterIndex);
+	return letters[Math.floor(Math.random() * letters.length)];
+}
+`;
+
+	// Write the embedded version to src/lib/atlas-data.ts
+	await writeFile(path.join(process.cwd(), 'src', 'lib', 'atlas-data.ts'), atlasDataContent);
+
+	console.log('✅ Base64 embedded atlas-data.ts generated successfully!');
+	console.log('📊 Embedded data sizes:');
+	console.log('  - Countries: ' + (countriesB64.length / 1024).toFixed(1) + 'KB');
+	console.log('  - Aliases: ' + (aliasesB64.length / 1024).toFixed(1) + 'KB'); 
+	console.log('  - Letter Index: ' + (letterIndexB64.length / 1024).toFixed(1) + 'KB');
+	console.log('  - Total embedded: ' + ((countriesB64.length + aliasesB64.length + letterIndexB64.length + manifestB64.length) / 1024).toFixed(1) + 'KB');
+	console.log('🔒 No external data files - everything bundled in JavaScript!');
 }
 
 main().catch((err) => {
