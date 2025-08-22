@@ -1,16 +1,10 @@
-# Define the services (containers) we want to run
 services:
-  # 2. The Spring Boot Application Service
-  app:
+  backend:
+    # This assumes you have a Dockerfile that builds your Spring Boot app
     build: .
-    container_name: visitor-app
-    depends_on:
-      - db
+    image: atlas-go-backend
     ports:
       - "8080:8080"
-    environment:
-      - SPRING_DATASOURCE_URL=jdbc:postgresql://db.yinjxabfetclaulckpyu.supabase.co:5432/postgres
-
-# Define the volume to persist database data
-volumes:
-  postgres-data:
+    # This is the key part! It tells Docker Compose to load the .env file
+    env_file:
+      - .env
