@@ -1,15 +1,19 @@
-# Start with a base image that has Java 17 installed
-FROM openjdk:24-slim
+# Stage 1: Build the application using a standard Maven image with Eclipse Temurin JDK 24
+FROM maven:3-eclipse-temurin-24 AS build
+WORKDIR /app
+COPY pom.xml .
+COPY src ./src
 
-# Set a working directory inside the container
+# This command builds your project using Java 24
+RUN mvn clean package -DskipTests
+
+
+# Stage 2: Create the final, lightweight image using a secure Alpine JRE 24
+FROM eclipse-temurin:24-jre-alpine
 WORKDIR /app
 
-# Copy the compiled .jar file from your computer's 'target' directory
-# into the container at /app/app.jar
-COPY target/*.jar app.jar
+# This copies the .jar file that was created in the stage above
+COPY --from=build /app/target/*.jar app.jar
 
-# Tell Docker that the container will listen on port 8080
 EXPOSE 8080
-
-# This is the command that will run when the container starts
 ENTRYPOINT ["java", "-jar", "app.jar"]
