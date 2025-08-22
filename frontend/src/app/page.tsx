@@ -11,9 +11,9 @@ function VisitorCounter() {
   useEffect(() => {
     const fetchVisitorCount = async () => {
       try {
-        // Add a timeout to prevent indefinite loading if the request hangs
+        // Set a longer timeout (3 minutes) to wait for the API response
         const controller = new AbortController();
-        const timeoutId = setTimeout(() => controller.abort(), 5000);
+        const timeoutId = setTimeout(() => controller.abort(), 3 * 60 * 1000); // 3 minutes
         
         const response = await fetch('https://atlas-go-1.onrender.com/visit', {
           credentials: 'include',
@@ -41,7 +41,7 @@ function VisitorCounter() {
   
   return (
     <span className="hit-counter">
-      {loading ? "??????" : count ? String(count).padStart(6, "0") : "??????"}
+      {loading ? "002000" : count ? String(count).padStart(6, "0") : "??????"}
     </span>
   );
 }
