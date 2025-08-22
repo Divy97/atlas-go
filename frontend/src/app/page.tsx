@@ -6,17 +6,43 @@ import Image from "next/image";
 
 function VisitorCounter() {
   const [count, setCount] = useState<number | null>(null);
+  const [loading, setLoading] = useState(true);
+  
   useEffect(() => {
-    try {
-      const key = "atlas-go-hit-counter";
-      const current = Number(localStorage.getItem(key) || "0");
-      const next = current + 1;
-      localStorage.setItem(key, String(next));
-      setCount(next);
-    } catch {}
+    const fetchVisitorCount = async () => {
+      try {
+        // Add a timeout to prevent indefinite loading if the request hangs
+        const controller = new AbortController();
+        const timeoutId = setTimeout(() => controller.abort(), 5000);
+        
+        const response = await fetch('https://atlas-go-1.onrender.com/visit', {
+          credentials: 'include',
+          signal: controller.signal
+        });
+        
+        clearTimeout(timeoutId);
+        
+        if (!response.ok) {
+          throw new Error(`Failed to fetch visitor count: ${response.status}`);
+        }
+        
+        const data = await response.json();
+        setCount(data.count);
+      } catch (error) {
+        console.error('Error fetching visitor count:', error);
+        // Don't set any count, will show "??????" due to null count
+      } finally {
+        setLoading(false);
+      }
+    };
+    
+    fetchVisitorCount();
   }, []);
+  
   return (
-    <span className="hit-counter">{String(count ?? 1).padStart(6, "0")}</span>
+    <span className="hit-counter">
+      {loading ? "??????" : count ? String(count).padStart(6, "0") : "??????"}
+    </span>
   );
 }
 
