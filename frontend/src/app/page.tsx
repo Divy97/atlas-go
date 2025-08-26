@@ -1,8 +1,9 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useState } from "react";
 import "./home.css";
 import Image from "next/image";
+import Link from "next/link";
 
 function VisitorCounter() {
   const [count, setCount] = useState<number | null>(null);
@@ -20,69 +21,9 @@ function VisitorCounter() {
   );
 }
 
-function MusicPlayer() {
-  const [playing, setPlaying] = useState(false);
-  const audioRef = useRef<HTMLAudioElement>(null);
-
-  useEffect(() => {
-    const audio = audioRef.current;
-    if (!audio) return;
-
-    const handleFirstInteraction = () => {
-      // This logic should only run once. After the first interaction, we remove the listeners.
-      window.removeEventListener('click', handleFirstInteraction);
-      window.removeEventListener('keydown', handleFirstInteraction);
-
-      // Try to play, and update state if successful.
-      audio.play()
-        .then(() => setPlaying(true))
-        .catch(err => console.warn("Autoplay after interaction failed:", err));
-    };
-
-    // Attempt to autoplay when the component mounts.
-    audio.play()
-      .then(() => setPlaying(true))
-      .catch(() => {
-        // If autoplay is blocked, set up listeners for the first user interaction.
-        setPlaying(false);
-        window.addEventListener('click', handleFirstInteraction);
-        window.addEventListener('keydown', handleFirstInteraction);
-      });
-    
-    // Cleanup listeners when the component unmounts.
-    return () => {
-      window.removeEventListener('click', handleFirstInteraction);
-      window.removeEventListener('keydown', handleFirstInteraction);
-    };
-  }, []);
-
-
-  const togglePlay = () => {
-    const audio = audioRef.current;
-    if (!audio) return;
-
-    if (playing) {
-      audio.pause();
-      setPlaying(false);
-    } else {
-      audio.play()
-        .then(() => setPlaying(true))
-        .catch(e => console.error("Audio play failed on click:", e));
-    }
-  };
-
-  return (
-    <div className="music-player-container">
-      <audio ref={audioRef} src="https://soundimage.org/wp-content/uploads/2019/01/The-Pixeltown-Shuffle.mp3" loop preload="auto" />
-      <button onClick={togglePlay} className="music-toggle-btn" title="Toggle Background Music">
-        <span className="blink">🎵</span> {playing ? "Mute" : "Play"} Music
-      </button>
-    </div>
-  );
-}
-
 export default function Home() {
   const [loading, setLoading] = useState(true);
+  
   useEffect(() => {
     const t = setTimeout(() => setLoading(false), 900);
     return () => clearTimeout(t);
@@ -92,14 +33,17 @@ export default function Home() {
     <div className="home-retro-root">
       {loading && (
         <div className="loading-overlay" aria-live="polite">
-          <div className="loading-box">LOADING… PLEASE WAIT ⏳</div>
+          <div className="loading-box">
+            <div className="loading-spinner">⚡</div>
+            LOADING AWESOME GAMES... PLEASE WAIT ⏳
+          </div>
         </div>
       )}
 
-      <MusicPlayer />
-
       <section className="home-hero">
         <div className="hero-inner">
+          <div className="hero-badge">🎮 ULTIMATE GEOGRAPHY GAMES 🎮</div>
+          
           <h1 className="hero-title rainbow-text wordart-outline">
             <Image
               width={100}
@@ -119,27 +63,68 @@ export default function Home() {
               style={{ height: "auto" }}
             />
           </h1>
-          <p className="hero-sub blink">*** ✨ WELCOME TO Atlas Go!!! ✨ ***</p>
+          
+          <p className="hero-sub blink">*** ✨ TEST YOUR GEOGRAPHY SKILLS! ✨ ***</p>
+          <p className="hero-description">Challenge yourself with countries and cities from around the world!</p>
+          
           <div className="hero-ctas">
-            <a className="cta primary" href="/atlas">
-              Play Atlas
-            </a>
-            <a className="cta secondary" href="#games">
-              Explore Games
-            </a>
+            <Link className="cta primary mega-cta" href="/atlas">
+              🚀 START PLAYING NOW! 🚀
+            </Link>
+            <Link className="cta secondary" href="#games">
+              📋 Browse All Games
+            </Link>
+          </div>
+
+          <div className="hero-stats">
+            <div className="stat-item">
+              <span className="stat-number">200+</span>
+              <span className="stat-label">Countries</span>
+            </div>
+            <div className="stat-divider">•</div>
+            <div className="stat-item">
+              <span className="stat-number">150K+</span>
+              <span className="stat-label">Cities</span>
+            </div>
+            <div className="stat-divider">•</div>
+            <div className="stat-item">
+              <span className="stat-number">∞</span>
+              <span className="stat-label">Fun</span>
+            </div>
           </div>
         </div>
       </section>
 
       <div className="retro-marquee" role="marquee" aria-label="announcements">
         <div className="marquee-inner">
-          🔥 WELCOME 🔥 tO ThE UlTiMaTe GaMe 🔥 PlAy aTlAs nOw 🔥 NeW MoDeS SooN
-          🔥
+          🔥 WELCOME TO THE ULTIMATE GEOGRAPHY CHALLENGE 🔥 PLAY ATLAS NOW 🔥 NEW CITIES MODE AVAILABLE 🔥 TEST YOUR KNOWLEDGE 🔥
         </div>
       </div>
 
       <nav className="retro-nav" aria-label="primary">
-        <a id="code-3AE" className="nav-btn" href="/atlas">
+        <Link className="nav-btn" href="/atlas">
+          <Image
+            height={16}
+            width={20}
+            className="arrow-gif"
+            alt="arrow"
+            src="https://web.archive.org/web/20090830131028im_/http://geocities.com/SunsetStrip/Amphitheatre/8793/aniarrow.gif"
+            style={{ height: "auto" }}
+          />
+          Countries Atlas
+        </Link>
+        <Link className="nav-btn" href="/cities-atlas">
+          <Image
+            height={16}
+            width={20}
+            className="arrow-gif"
+            alt="arrow"
+            src="https://web.archive.org/web/20090830131028im_/http://geocities.com/SunsetStrip/Amphitheatre/8793/aniarrow.gif"
+            style={{ height: "auto" }}
+          />
+          Cities Atlas
+        </Link>
+        {/* <a className="nav-btn" href="#about">
           <Image
             height={30}
             width={30}
@@ -148,107 +133,147 @@ export default function Home() {
             src="https://web.archive.org/web/20090830131028im_/http://geocities.com/SunsetStrip/Amphitheatre/8793/aniarrow.gif"
             style={{ height: "auto" }}
           />
-          Play Atlas
+          <span className="code">About</span>
         </a>
-        <a id="code-6A9" className="nav-btn" href="#flags">
+        <a className="nav-btn soon" href="#flags">
           <Image
-            height={30}
-            width={30}
+            height={16}
+            width={20}
             className="arrow-gif"
             alt="arrow"
             src="https://web.archive.org/web/20090830131028im_/http://geocities.com/SunsetStrip/Amphitheatre/8793/aniarrow.gif"
             style={{ height: "auto" }}
           />
           Guess the Flag
-        </a>
+        </a> */}
       </nav>
 
-      <main id="games" className="home-games-grid">
-        <div className="game-card accent-blue double">
-          <div className="game-card-body">
-            <h2 className="game-card-title">Atlas (Countries)</h2>
-            <p className="game-card-desc">
-              Name countries until your brain MELTS 🧠💥
-            </p>
+      <main id="games" className="home-games-section">
+        <div className="games-header">
+          <h2 className="games-title">🎯 CHOOSE YOUR CHALLENGE 🎯</h2>
+          <p className="games-subtitle">Pick a game mode and start your geography adventure!</p>
+        </div>
+
+        <div className="home-games-grid">
+          <div className="game-card accent-blue double featured">
+            <div className="game-card-header">
+              <div className="popularity-badge">🔥 MOST POPULAR</div>
+            </div>
+            <div className="game-card-body">
+              <h3 className="game-card-title">🌍 Atlas (Countries)</h3>
+              <p className="game-card-desc">
+                Name countries until your brain MELTS! Start with any country and keep the chain going. Perfect for geography enthusiasts! 🧠💥
+              </p>
+              <div className="game-features">
+                <span className="feature-tag">✅ 200+ Countries</span>
+                <span className="feature-tag">⏱️ Timed Mode</span>
+                <span className="feature-tag">🏆 High Scores</span>
+              </div>
+            </div>
+            <div className="game-card-actions">
+              <Link className="home-cta primary-cta" href="/atlas">
+                🚀 PLAY NOW - IT&apos;S FREE!
+              </Link>
+            </div>
           </div>
-          <div className="game-card-actions">
-            <a className="home-cta" href="/atlas">
-              CLICK HERE TO PLAY!
-            </a>
+
+          <div className="game-card accent-green dotted new-game">
+            <div className="game-card-header">
+              <div className="new-badge">
+                <Image
+                  height={30}
+                  width={50}
+                  className="new-gif"
+                  alt="new"
+                  src="https://web.archive.org/web/20090830160525im_/http://geocities.com/CapitolHill/Parliament/1048/new.gif"
+                  style={{ height: "auto" }}
+                />
+              </div>
+            </div>
+            <div className="game-card-body">
+              <h3 className="game-card-title">🏙️ Atlas (Cities)</h3>
+              <p className="game-card-desc">
+                Cities mode with 150k+ cities worldwide! From Tokyo to Timbuktu - can you handle the ultimate urban challenge? 🏙️
+              </p>
+              <div className="game-features">
+                <span className="feature-tag">✅ 150K+ Cities</span>
+                <span className="feature-tag">🌟 Brand New</span>
+                <span className="feature-tag">🗺️ Global Coverage</span>
+              </div>
+            </div>
+            <div className="game-card-actions">
+              <Link className="home-cta secondary-cta" href="/cities-atlas">
+                🎯 TRY THE NEW MODE!
+              </Link>
+            </div>
+          </div>
+
+          <div id="flags" className="game-card accent-orange dashed soon coming-soon">
+            <div className="game-card-header">
+              <div className="coming-soon-badge">🚧 COMING SOON</div>
+            </div>
+            <div className="game-card-body">
+              <h3 className="game-card-title">🏁 Guess the Flag</h3>
+              <p className="game-card-desc">
+                Test your flag knowledge! Can you identify countries by their flags? This awesome mode is in development! 🏁
+              </p>
+              <div className="game-features">
+                <span className="feature-tag disabled">🏁 Flag Quiz</span>
+                <span className="feature-tag disabled">⚡ Quick Rounds</span>
+                <span className="feature-tag disabled">🔄 Coming Soon</span>
+              </div>
+            </div>
+            <div className="game-card-actions">
+              <button className="home-cta disabled" disabled>
+                🔒 UNDER CONSTRUCTION
+              </button>
+            </div>
           </div>
         </div>
 
-        <div className="game-card accent-green dotted soon">
-          <div className="game-card-body">
-            <h2 className="game-card-title">Atlas (Cities)
-            <Image
-                height={30}
-                width={50}
-                className="new-gif"
-                alt="new"
-                src="https://web.archive.org/web/20090830160525im_/http://geocities.com/CapitolHill/Parliament/1048/new.gif"
-                style={{ height: "auto" }}
-              />
-            </h2>
-            <p className="game-card-desc">
-              Cities mode… bigger brain burn. SOON!!! 🏙️
-            </p>
-          </div>
-          <div className="game-card-actions">
-            <button className="home-cta disabled" disabled>
-              Coming Soon
-            </button>
-          </div>
-        </div>
-
-        <div id="flags" className="game-card accent-pink dashed soon">
-          <div className="game-card-body">
-            <h2 className="game-card-title">
-              Guess the Flag
-              <Image
-                height={30}
-                width={50}
-                className="new-gif"
-                alt="new"
-                src="https://web.archive.org/web/20090830160525im_/http://geocities.com/CapitolHill/Parliament/1048/new.gif"
-                style={{ height: "auto" }}
-              />
-            </h2>
-            <p className="game-card-desc">
-              Flags = FUN. Coming Soon. Don’t miss it!!! 🚩🔥
-            </p>
-          </div>
-          <div className="game-card-actions">
-            <button className="home-cta disabled" disabled>
-              Coming Soon
-            </button>
+        <div className="quick-start-section">
+          <div className="quick-start-box">
+            <h3>⚡ QUICK START GUIDE ⚡</h3>
+            <div className="quick-steps">
+              <div className="step">
+                <span className="step-number">1</span>
+                <span className="step-text">Choose a game mode above</span>
+              </div>
+              <div className="step">
+                <span className="step-number">2</span>
+                <span className="step-text">Start typing country/city names</span>
+              </div>
+              <div className="step">
+                <span className="step-number">3</span>
+                <span className="step-text">Keep the chain going as long as possible!</span>
+              </div>
+            </div>
+            <p className="quick-tip">💡 <strong>Pro Tip:</strong> The last letter of your answer becomes the first letter of the next!</p>
           </div>
         </div>
       </main>
 
-      <section className="awards">
-        <Image
-          height={200}
-          width={100}
-          className="dance"
-          alt="dancer"
-          src="https://blob.gifcities.org/gifcities/2JTU7QIVICQHJGTS7X2XATX7VLAK7MNN.gif"
-          style={{ height: "auto" }}
-        />
-      </section>
-
       <footer className="home-footer">
-        <p className="blink">
-          You are visitor number: <VisitorCounter /> since 1998
-        </p>
-        <p>
-          Contact:{" "}
-          <a href="mailto:divyparekh1810@gmail.com">divyparekh1810@gmail.com</a>{" "}
-          | Github: <a href="https://github.com/Divy97">@Divy97</a>
-        </p>
-        <p className="small">
-          Last updated: August 16, 1998 | © {new Date().getFullYear()} Atlas Go
-        </p>
+        <div className="footer-row">
+          <span>© 2025 Atlas Go - The Ultimate Geography Game</span>
+          <span>•</span>
+          <span>Visitors: <VisitorCounter /></span>
+          <span>•</span>
+          <span>
+            <Image
+              height={18}
+              width={20}
+              className="envelope"
+              alt="email"
+              src="https://web.archive.org/web/20090830160525im_/http://geocities.com/CapitolHill/Parliament/1048/envelope.gif"
+              style={{ height: "auto" }}
+            />
+            Made with ❤️ for geography lovers
+          </span>
+        </div>
+        <div className="footer-row small">
+          <span>🌍 Test your geography knowledge • 🏆 Challenge your friends • 🎮 Free to play forever</span>
+        </div>
       </footer>
     </div>
   );

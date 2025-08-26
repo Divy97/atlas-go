@@ -1,17 +1,22 @@
-/* eslint-disable @typescript-eslint/no-unused-vars */
 "use client";
 
 import Link from "next/link";
 import { useEffect, useRef, useState } from "react";
-import {
-  canonicalize,
-  getCountriesByFirstLetter,
-  getCountryById,
-  getRandomAvailableLetter,
-  resolveAlias,
-  type Country,
-} from "@/lib/atlas-data";
-import "./retro.css";
+import "../atlas/retro.css";
+
+type City = {
+  id: string;
+  displayName: string;
+  country: string;
+};
+
+type CitiesDataModule = {
+  canonicalize: (name: string) => string;
+  getCitiesByFirstLetter: (letter: string) => City[];
+  getCityById: (id: string) => City | undefined;
+  getRandomAvailableLetter: () => string;
+  resolveAlias: (name: string) => string | null;
+};
 
 type GameMode = 'timed-60' | 'timed-90' | 'timed-180' | 'endless';
 
@@ -19,7 +24,7 @@ function GameModeDialog({ onSelectMode }: { onSelectMode: (mode: GameMode) => vo
 	return (
 		<div className="mode-dialog-overlay">
 			<div className="mode-dialog">
-				<h2 className="mode-dialog-title blink">🎮 SELECT GAME MODE 🎮</h2>
+				<h2 className="mode-dialog-title blink">🏙️ SELECT CITIES GAME MODE 🏙️</h2>
 				<div className="mode-options">
 					<button className="mode-button" onClick={() => onSelectMode('timed-60')}>
 						<div className="mode-icon">⏳</div>
@@ -52,13 +57,13 @@ function lastLetterFromCanonical(canonical: string): string | null {
   return m ? m[0] : null;
 }
 
-function lastLetterOfCountry(country: Country): string | null {
-  const canonical = canonicalize(country.displayName);
+function lastLetterOfCity(city: City, citiesData: CitiesDataModule): string | null {
+  const canonical = citiesData.canonicalize(city.displayName);
   return lastLetterFromCanonical(canonical);
 }
 
-function pickComputerMove(requiredLetter: string, usedIds: Set<string>): Country | null {
-  const candidates = getCountriesByFirstLetter(requiredLetter).filter(
+function pickComputerMove(requiredLetter: string, usedIds: Set<string>, citiesData: CitiesDataModule): City | null {
+  const candidates = citiesData.getCitiesByFirstLetter(requiredLetter).filter(
     (c) => !usedIds.has(c.id)
   );
   if (candidates.length === 0) return null;
@@ -66,13 +71,13 @@ function pickComputerMove(requiredLetter: string, usedIds: Set<string>): Country
   return choice;
 }
 
-export default function AtlasRetroPage() {
+export default function CitiesAtlasRetroPage() {
   const [gameMode, setGameMode] = useState<GameMode | null>(null);
   const [requiredLetter, setRequiredLetter] = useState<string>("");
   const [input, setInput] = useState<string>("");
   const [usedIds, setUsedIds] = useState<Set<string>>(new Set());
   const [history, setHistory] = useState<
-    { by: "you" | "cpu"; country: Country, status: 'ok' | 'rejected' }[]
+    { by: "you" | "cpu"; city: City, status: 'ok' | 'rejected' }[]
   >([]);
   const [status, setStatus] = useState<{ text: string; type: "info" | "success" | "error" | "warning" }>({ text: "Select game mode to begin!", type: "info" });
   const [gameOver, setGameOver] = useState<boolean>(false);
@@ -81,9 +86,13 @@ export default function AtlasRetroPage() {
   const [streak, setStreak] = useState(0);
   const [skipsLeft, setSkipsLeft] = useState(3);
   const [cpuThinking, setCpuThinking] = useState(false);
-  const [lastPlayerMove, setLastPlayerMove] = useState<Country | null>(null);
-  const [lastCpuMove, setLastCpuMove] = useState<Country | null>(null);
+  const [lastPlayerMove, setLastPlayerMove] = useState<City | null>(null);
+  const [lastCpuMove, setLastCpuMove] = useState<City | null>(null);
   const [bigFeedback, setBigFeedback] = useState<{ text: string; type: 'correct' | 'wrong' | 'win' | 'lose' } | null>(null);
+  const [citiesData, setCitiesData] = useState<CitiesDataModule | null>(null);
+  const [isLoadingData, setIsLoadingData] = useState<boolean>(false);
+  const [loadingProgress, setLoadingProgress] = useState<number>(0);
+  const [loadingStage, setLoadingStage] = useState<string>("");
 
   const inputRef = useRef<HTMLInputElement>(null);
   const timerRef = useRef<NodeJS.Timeout | null>(null);
@@ -100,14 +109,72 @@ export default function AtlasRetroPage() {
     }
   };
 
-  const startGame = (mode: GameMode) => {
+  const loadCitiesData = async () => {
+    if (citiesData) return citiesData;
+    
+    setIsLoadingData(true);
+    setLoadingProgress(0);
+    setLoadingStage("Initializing cities database...");
+    
+    try {
+      // Simulate loading progress with stages
+      const stages = [
+        { progress: 20, message: "Waking up the geography nerds..." },
+        { progress: 35, message: "Teaching the computer world capitals..." },
+        { progress: 60, message: "Arguing with GPS about city names..." },
+        { progress: 85, message: "Bribing the atlas for secret cities..." },
+        { progress: 95, message: "Making sure we didn't forget thiruvananthapuram..." },
+        { progress: 100, message: "Ready to embarrass you at geography!" }
+      ];
+      
+      // Simulate progressive loading
+      for (const stage of stages.slice(0, -1)) {
+        setLoadingProgress(stage.progress);
+        setLoadingStage(stage.message);
+        await new Promise(resolve => setTimeout(resolve, 300 + Math.random() * 200));
+      }
+      
+      const citiesModule = await import("@/lib/cities-atlas-data");
+      
+      // Final stage
+      setLoadingProgress(100);
+      setLoadingStage("Ready to play!");
+      
+      const data: CitiesDataModule = {
+        canonicalize: citiesModule.canonicalize,
+        getCitiesByFirstLetter: citiesModule.getCitiesByFirstLetter,
+        getCityById: citiesModule.getCityById,
+        getRandomAvailableLetter: citiesModule.getRandomAvailableLetter,
+        resolveAlias: citiesModule.resolveAlias,
+      };
+      
+      setCitiesData(data);
+      
+      // Small delay to show completion
+      await new Promise(resolve => setTimeout(resolve, 500));
+      setIsLoadingData(false);
+      return data;
+    } catch (error) {
+      console.error("Failed to load cities data:", error);
+      setStatus({ text: "Failed to load game data!", type: "error" });
+      setLoadingStage("Error loading cities data!");
+      setIsLoadingData(false);
+      return null;
+    }
+  };
+
+  const startGame = async (mode: GameMode) => {
     setGameMode(mode);
-    const start = getRandomAvailableLetter();
+    
+    const data = await loadCitiesData();
+    if (!data) return;
+    
+    const start = data.getRandomAvailableLetter();
     const duration = getGameDuration(mode);
     setRequiredLetter(start);
     setUsedIds(new Set());
     setHistory([]);
-    setStatus({ text: "Type a country name to begin!", type: "info" });
+    setStatus({ text: "Type a city name to begin!", type: "info" });
     setGameOver(false);
     setGameStarted(false);
     setTimeLeft(duration);
@@ -172,21 +239,21 @@ export default function AtlasRetroPage() {
   };
 
   function submitPlayer() {
-    if (gameOver || cpuThinking) return;
+    if (gameOver || cpuThinking || !citiesData) return;
     const trimmed = input.trim();
     if (!trimmed) return;
 
-    const canonicalId = resolveAlias(trimmed);
-    const country = canonicalId ? getCountryById(canonicalId) : null;
+    const canonicalId = citiesData.resolveAlias(trimmed);
+    const city = canonicalId ? citiesData.getCityById(canonicalId) : undefined;
 
-    if (!country) {
-      setStatus({ text: "❌ Unknown country! Try again.", type: "error" });
+    if (!city) {
+      setStatus({ text: "❌ Unknown city! Try again.", type: "error" });
       setStreak(0);
       playSound('wrong');
       showBigFeedback("WRONG!", 'wrong');
       return;
     }
-    if (usedIds.has(country.id)) {
+    if (usedIds.has(city.id)) {
       setStatus({ text: "❌ Already used! Try again.", type: "error" });
       setStreak(0);
       playSound('wrong');
@@ -194,7 +261,7 @@ export default function AtlasRetroPage() {
       return;
     }
     
-    const first = canonicalize(country.displayName).charAt(0);
+    const first = citiesData.canonicalize(city.displayName).charAt(0);
     if (first !== requiredLetter) {
       setStatus({ text: `❌ Must start with '${requiredLetter.toUpperCase()}'!`, type: "error" });
       setStreak(0);
@@ -208,11 +275,11 @@ export default function AtlasRetroPage() {
     showBigFeedback("CORRECT!", 'correct');
     setStatus({ text: "CPU is thinking...", type: "info" });
     setStreak(s => s + 1);
-    setLastPlayerMove(country);
-    const nextLetter = lastLetterOfCountry(country);
-    const nextUsed = new Set(usedIds).add(country.id);
+    setLastPlayerMove(city);
+    const nextLetter = lastLetterOfCity(city, citiesData);
+    const nextUsed = new Set(usedIds).add(city.id);
     
-    setHistory((h) => [...h, { by: "you", country, status: 'ok' }]);
+    setHistory((h) => [...h, { by: "you", city, status: 'ok' }]);
     setInput("");
     setCpuThinking(true);
 
@@ -228,7 +295,7 @@ export default function AtlasRetroPage() {
 
     // CPU thinks for a moment
     setTimeout(() => {
-      const cpu = pickComputerMove(nextLetter, nextUsed);
+      const cpu = pickComputerMove(nextLetter, nextUsed, citiesData);
       if (!cpu) {
         setRequiredLetter(nextLetter);
         setGameOver(true);
@@ -238,10 +305,10 @@ export default function AtlasRetroPage() {
         return;
       }
 
-      const cpuNext = lastLetterOfCountry(cpu);
+      const cpuNext = lastLetterOfCity(cpu, citiesData);
       nextUsed.add(cpu.id);
       setLastCpuMove(cpu);
-      setHistory((h) => [...h, { by: "cpu", country: cpu, status: 'ok' }]);
+      setHistory((h) => [...h, { by: "cpu", city: cpu, status: 'ok' }]);
 
       if (!cpuNext) {
         setGameOver(true);
@@ -260,7 +327,7 @@ export default function AtlasRetroPage() {
   }
 
   function handleSkip() {
-    if (gameOver || skipsLeft <= 0 || cpuThinking) {
+    if (gameOver || skipsLeft <= 0 || cpuThinking || !citiesData) {
       if (skipsLeft <= 0) {
         setGameOver(true);
         showBigFeedback("GAME OVER", 'lose');
@@ -269,7 +336,7 @@ export default function AtlasRetroPage() {
       return;
     }
     setSkipsLeft(s => s - 1);
-    const newLetter = getRandomAvailableLetter();
+    const newLetter = citiesData.getRandomAvailableLetter();
     setRequiredLetter(newLetter);
     setStatus({ text: `Skipped! New letter is '${newLetter.toUpperCase()}'.`, type: "info"});
   }
@@ -290,6 +357,57 @@ export default function AtlasRetroPage() {
     );
   }
 
+  if (isLoadingData) {
+    return (
+      <div className="retro-game-root">
+        <div className="mode-dialog-overlay">
+          <div className="enhanced-loader-dialog">
+            <div className="loader-header">
+              <h2 className="loader-title blink">🏙️ CITIES ATLAS LOADING... 🏙️</h2>
+              <div className="loader-subtitle">Preparing the ultimate cities challenge!</div>
+            </div>
+            
+            <div className="loader-content">
+              <div className="loader-visual">
+                <div className="retro-spinner-enhanced"></div>
+                <div className="loading-dots">
+                  <span className="dot"></span>
+                  <span className="dot"></span>
+                  <span className="dot"></span>
+                </div>
+              </div>
+              
+              <div className="progress-container">
+                <div className="progress-bar">
+                  <div 
+                    className="progress-fill" 
+                    style={{ width: `${loadingProgress}%` }}
+                  ></div>
+                </div>
+                <div className="progress-text">
+                  {loadingProgress}% Complete
+                </div>
+              </div>
+              
+              <div className="loading-stage">
+                {loadingStage}
+              </div>
+            
+              <div className="loading-tips">
+                <p className="tip-text">
+                  💡 <strong>Fun Fact:</strong> The CPU knows cities you&apos;ve never heard of. It&apos;s basically cheating.
+                </p>
+                <p className="tip-text">
+                  🎯 <strong>Warning:</strong> Saying &quot;That&apos;s not a real place!&quot; won&apos;t help you win.
+                </p>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="retro-game-root">
       <audio ref={correctSoundRef} src="https://www.orangefreesounds.com/wp-content/uploads/2017/09/Ding-sfx.mp3" preload="auto" />
@@ -302,9 +420,9 @@ export default function AtlasRetroPage() {
       )}
 
       <header className="retro-game-header">
-        <h1 className="game-title blink">🌍 Countries Atlas Challenge!</h1>
+        <h1 className="game-title blink">🏙️ Cities Atlas Challenge!</h1>
         <div className="retro-marquee">
-          <div className="marquee-inner">Name a country, don&apos;t repeat, and beat the AI opponent!</div>
+          <div className="marquee-inner">Type a city name, don&apos;t repeat, and race against the clock!</div>
         </div>
       </header>
 
@@ -318,6 +436,7 @@ export default function AtlasRetroPage() {
                   <>
                     <div className="move-label">YOU ➡️</div>
                     <div className="move-country">{lastPlayerMove.displayName}</div>
+                    <div className="move-extra">{lastPlayerMove.country}</div>
                   </>
                 ) : (
                   <div className="move-placeholder">Your move...</div>
@@ -336,6 +455,7 @@ export default function AtlasRetroPage() {
                   <>
                     <div className="move-label">CPU ➡️</div>
                     <div className="move-country">{lastCpuMove.displayName}</div>
+                    <div className="move-extra">{lastCpuMove.country}</div>
                   </>
                 ) : (
                   <div className="move-placeholder">CPU move...</div>
@@ -351,7 +471,7 @@ export default function AtlasRetroPage() {
               className="retro-input"
               type="text"
               value={input}
-              placeholder="Type a country..."
+              placeholder="Type a city..."
               onChange={(e) => handlePlayerInput(e.target.value)}
               onKeyDown={(e) => { if (e.key === "Enter") submitPlayer(); }}
               disabled={gameOver || cpuThinking}
@@ -403,11 +523,11 @@ export default function AtlasRetroPage() {
           <div className="terminal-log">
             <div className="panel-header">Terminal Log</div>
             <div className="terminal-screen">
-              <div className="terminal-header">&gt; ATLAS_GAME.EXE</div>
+              <div className="terminal-header">&gt; CITIES_ATLAS.EXE</div>
               {history.length === 0 && <div className="terminal-line">&gt; Waiting for input...</div>}
               {history.map((h, i) => (
                 <div key={i} className="terminal-line typing">
-                  &gt; {h.by === 'you' ? 'YOU' : 'CPU'}: {h.country.displayName} {h.status === 'ok' ? '✔' : '❌'}
+                  &gt; {h.by === 'you' ? 'YOU' : 'CPU'}: {h.city.displayName}, {h.city.country} {h.status === 'ok' ? '✔' : '❌'}
                 </div>
               ))}
               {history.length > 0 && <div className="terminal-cursor">_</div>}
@@ -418,9 +538,9 @@ export default function AtlasRetroPage() {
 
       <footer className="retro-game-footer">
           <p className="webring-links">
-            [ <Link href="/">Back to Home</Link> ] [ <Link href="/cities-atlas">Cities Atlas</Link> ]
+            [ <Link href="/">Back to Home</Link> ] [ <Link href="/atlas">Countries Atlas</Link> ]
           </p>
       </footer>
     </div>
   );
-} 
+}
