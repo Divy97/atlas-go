@@ -15,7 +15,9 @@ function VisitorCounter() {
         if (!VISIT_API_URL) {
           throw new Error('NEXT_PUBLIC_VISIT_API_URL is not defined');
         }
-        const response = await fetch(VISIT_API_URL);
+        const response = await fetch(VISIT_API_URL, {
+          credentials: 'include'
+        });
         const data = await response.json();
         setCount(data.count);
       } catch (error) {
