@@ -6,15 +6,34 @@ import Image from "next/image";
 
 function VisitorCounter() {
   const [count, setCount] = useState<number | null>(null);
+  const [loading, setLoading] = useState(true);
+  
   useEffect(() => {
-    try {
-      const key = "atlas-go-hit-counter";
-      const current = Number(localStorage.getItem(key) || "0");
-      const next = current + 1;
-      localStorage.setItem(key, String(next));
-      setCount(next);
-    } catch {}
+    const fetchCount = async () => {
+      try {
+        const VISIT_API_URL = process.env.NEXT_PUBLIC_VISIT_API_URL;
+        if (!VISIT_API_URL) {
+          throw new Error('NEXT_PUBLIC_VISIT_API_URL is not defined');
+        }
+        const response = await fetch(VISIT_API_URL);
+        const data = await response.json();
+        setCount(data.count);
+      } catch (error) {
+        console.error('Failed to fetch visitor count:', error);
+        // Fallback to default count (2000) if API fails
+        setCount(2000);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchCount();
   }, []);
+
+  if (loading) {
+    return <span className="hit-counter">------</span>;
+  }
+
   return (
     <span className="hit-counter">{String(count ?? 1).padStart(6, "0")}</span>
   );
