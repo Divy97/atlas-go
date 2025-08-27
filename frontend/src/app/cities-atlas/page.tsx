@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useEffect, useRef, useState } from "react";
 import "../atlas/retro.css";
+import { citiesService } from "@/lib/cities-service";
 
 type City = {
   id: string;
@@ -12,10 +13,10 @@ type City = {
 
 type CitiesDataModule = {
   canonicalize: (name: string) => string;
-  getCitiesByFirstLetter: (letter: string) => City[];
-  getCityById: (id: string) => City | undefined;
-  getRandomAvailableLetter: () => string;
-  resolveAlias: (name: string) => string | null;
+  getCitiesByFirstLetter: (letter: string) => Promise<City[]>;
+  getCityById: (id: string) => Promise<City | undefined>;
+  getRandomAvailableLetter: () => Promise<string>;
+  resolveAlias: (name: string) => Promise<string | null>;
 };
 
 type GameMode = 'timed-60' | 'timed-90' | 'timed-180' | 'endless';
@@ -62,8 +63,8 @@ function lastLetterOfCity(city: City, citiesData: CitiesDataModule): string | nu
   return lastLetterFromCanonical(canonical);
 }
 
-function pickComputerMove(requiredLetter: string, usedIds: Set<string>, citiesData: CitiesDataModule): City | null {
-  const candidates = citiesData.getCitiesByFirstLetter(requiredLetter).filter(
+async function pickComputerMove(requiredLetter: string, usedIds: Set<string>, citiesData: CitiesDataModule): Promise<City | null> {
+  const candidates = (await citiesData.getCitiesByFirstLetter(requiredLetter)).filter(
     (c) => !usedIds.has(c.id)
   );
   if (candidates.length === 0) return null;
@@ -114,50 +115,43 @@ export default function CitiesAtlasRetroPage() {
     
     setIsLoadingData(true);
     setLoadingProgress(0);
-    setLoadingStage("Initializing cities database...");
+    setLoadingStage("Connecting to cities database...");
     
     try {
       // Simulate loading progress with stages
       const stages = [
-        { progress: 20, message: "Waking up the geography nerds..." },
-        { progress: 35, message: "Teaching the computer world capitals..." },
-        { progress: 60, message: "Arguing with GPS about city names..." },
-        { progress: 85, message: "Bribing the atlas for secret cities..." },
-        { progress: 95, message: "Making sure we didn't forget thiruvananthapuram..." },
-        { progress: 100, message: "Ready to embarrass you at geography!" }
+        { progress: 20, message: "Establishing secure connection..." },
+        { progress: 40, message: "Loading city indexes..." },
+        { progress: 60, message: "Preparing search algorithms..." },
+        { progress: 80, message: "Optimizing for lightning-fast queries..." },
+        { progress: 95, message: "Final preparations..." },
+        { progress: 100, message: "Ready to challenge you!" }
       ];
       
       // Simulate progressive loading
       for (const stage of stages.slice(0, -1)) {
         setLoadingProgress(stage.progress);
         setLoadingStage(stage.message);
-        await new Promise(resolve => setTimeout(resolve, 300 + Math.random() * 200));
+        await new Promise(resolve => setTimeout(resolve, 200 + Math.random() * 100));
       }
       
-      const citiesModule = await import("@/lib/cities-atlas-data");
+      // Test the connection by getting a random letter
+      await citiesService.getRandomAvailableLetter();
       
       // Final stage
       setLoadingProgress(100);
       setLoadingStage("Ready to play!");
       
-      const data: CitiesDataModule = {
-        canonicalize: citiesModule.canonicalize,
-        getCitiesByFirstLetter: citiesModule.getCitiesByFirstLetter,
-        getCityById: citiesModule.getCityById,
-        getRandomAvailableLetter: citiesModule.getRandomAvailableLetter,
-        resolveAlias: citiesModule.resolveAlias,
-      };
-      
-      setCitiesData(data);
+      setCitiesData(citiesService);
       
       // Small delay to show completion
-      await new Promise(resolve => setTimeout(resolve, 500));
+      await new Promise(resolve => setTimeout(resolve, 300));
       setIsLoadingData(false);
-      return data;
+      return citiesService;
     } catch (error) {
       console.error("Failed to load cities data:", error);
-      setStatus({ text: "Failed to load game data!", type: "error" });
-      setLoadingStage("Error loading cities data!");
+      setStatus({ text: "Failed to connect to cities database!", type: "error" });
+      setLoadingStage("Error connecting to database!");
       setIsLoadingData(false);
       return null;
     }
@@ -169,7 +163,7 @@ export default function CitiesAtlasRetroPage() {
     const data = await loadCitiesData();
     if (!data) return;
     
-    const start = data.getRandomAvailableLetter();
+    const start = await data.getRandomAvailableLetter();
     const duration = getGameDuration(mode);
     setRequiredLetter(start);
     setUsedIds(new Set());
@@ -238,13 +232,13 @@ export default function CitiesAtlasRetroPage() {
     setTimeout(() => setBigFeedback(null), 2000);
   };
 
-  function submitPlayer() {
+  async function submitPlayer() {
     if (gameOver || cpuThinking || !citiesData) return;
     const trimmed = input.trim();
     if (!trimmed) return;
 
-    const canonicalId = citiesData.resolveAlias(trimmed);
-    const city = canonicalId ? citiesData.getCityById(canonicalId) : undefined;
+    const canonicalId = await citiesData.resolveAlias(trimmed);
+    const city = canonicalId ? await citiesData.getCityById(canonicalId) : undefined;
 
     if (!city) {
       setStatus({ text: "❌ Unknown city! Try again.", type: "error" });
@@ -294,8 +288,8 @@ export default function CitiesAtlasRetroPage() {
     }
 
     // CPU thinks for a moment
-    setTimeout(() => {
-      const cpu = pickComputerMove(nextLetter, nextUsed, citiesData);
+    setTimeout(async () => {
+      const cpu = await pickComputerMove(nextLetter, nextUsed, citiesData);
       if (!cpu) {
         setRequiredLetter(nextLetter);
         setGameOver(true);
@@ -326,7 +320,7 @@ export default function CitiesAtlasRetroPage() {
     }, 1200);
   }
 
-  function handleSkip() {
+  async function handleSkip() {
     if (gameOver || skipsLeft <= 0 || cpuThinking || !citiesData) {
       if (skipsLeft <= 0) {
         setGameOver(true);
@@ -336,7 +330,7 @@ export default function CitiesAtlasRetroPage() {
       return;
     }
     setSkipsLeft(s => s - 1);
-    const newLetter = citiesData.getRandomAvailableLetter();
+    const newLetter = await citiesData.getRandomAvailableLetter();
     setRequiredLetter(newLetter);
     setStatus({ text: `Skipped! New letter is '${newLetter.toUpperCase()}'.`, type: "info"});
   }
@@ -364,7 +358,7 @@ export default function CitiesAtlasRetroPage() {
           <div className="enhanced-loader-dialog">
             <div className="loader-header">
               <h2 className="loader-title blink">🏙️ CITIES ATLAS LOADING... 🏙️</h2>
-              <div className="loader-subtitle">Preparing the ultimate cities challenge!</div>
+              <div className="loader-subtitle">Connecting to the ultimate cities database!</div>
             </div>
             
             <div className="loader-content">
@@ -395,10 +389,10 @@ export default function CitiesAtlasRetroPage() {
             
               <div className="loading-tips">
                 <p className="tip-text">
-                  💡 <strong>Fun Fact:</strong> The CPU knows cities you&apos;ve never heard of. It&apos;s basically cheating.
+                  💡 <strong>Pro Tip:</strong> Now powered by lightning-fast database queries!
                 </p>
                 <p className="tip-text">
-                  🎯 <strong>Warning:</strong> Saying &quot;That&apos;s not a real place!&quot; won&apos;t help you win.
+                  🚀 <strong>New:</strong> Instant city lookup with smart search capabilities!
                 </p>
               </div>
             </div>
