@@ -3,6 +3,8 @@ package go.atlas.backend.visit;
 import jakarta.servlet.http.Cookie;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
+import org.springframework.http.HttpHeaders;
+import org.springframework.http.ResponseCookie;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RestController;
@@ -21,7 +23,7 @@ public class VisitController {
     }
 
     @GetMapping("/visit")
-    public ResponseEntity<VisitReponse> trackVisitor(HttpServletRequest request, HttpServletResponse response) {
+    public ResponseEntity<VisitResponse> trackVisitor(HttpServletRequest request, HttpServletResponse response) {
         try {
             Optional<Cookie> cookieOpt = cookieHelper.getVisitorCookie(request);
 
@@ -30,12 +32,15 @@ public class VisitController {
 
             if (cookieOpt.isEmpty()) {
                 currentCount = visitorService.incrementAndGetCount();
-                response.addCookie(cookieHelper.createVisitorCookie());
+
+                ResponseCookie cookie = cookieHelper.createVisitorCookie();
+                response.addHeader(HttpHeaders.SET_COOKIE, cookie.toString());
             } else {
                 currentCount = visitorService.getCurrentCount();
             }
-            return ResponseEntity.ok(new VisitReponse(currentCount));
+            return ResponseEntity.ok(new VisitResponse(currentCount));
         } catch (Exception e) {
+            System.out.println("Exception: " + e.getMessage());
             return ResponseEntity.internalServerError().build();
         }
     }

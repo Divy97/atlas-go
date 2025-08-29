@@ -2,7 +2,10 @@ package go.atlas.backend.visit;
 
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.Cookie;
+import org.springframework.http.ResponseCookie;
 import org.springframework.stereotype.Component;
+
+import java.time.Duration;
 import java.util.Arrays;
 import java.util.Optional;
 import java.util.UUID;
@@ -28,11 +31,14 @@ public class CookieHelper {
     /**
      * This method ONLY creates a cookie. It returns a plain Cookie.
      */
-    public Cookie createVisitorCookie() {
+    public ResponseCookie createVisitorCookie() {
         String newVisitorId = UUID.randomUUID().toString();
-        Cookie newCookie = new Cookie(VISITOR_COOKIE_NAME, newVisitorId);
-        newCookie.setMaxAge(60 * 60 * 24 * 365); // 1 year
-        newCookie.setPath("/");
-        return newCookie;
+
+        return ResponseCookie.from(VISITOR_COOKIE_NAME, newVisitorId)
+                .maxAge(Duration.ofDays(30))
+                .path("/")
+                .secure(true)
+                .sameSite("None")
+                .build();
     }
 }

@@ -1,14 +1,14 @@
 package go.atlas.backend.visit;
 
-public class VisitReponse {
+public class VisitResponse {
 
     private Long count;
 
-    public VisitReponse(Long count) {
+    public VisitResponse(Long count) {
         this.count = count;
     }
 
-    public VisitReponse() {
+    public VisitResponse() {
     }
 
     public Long getCount() {
